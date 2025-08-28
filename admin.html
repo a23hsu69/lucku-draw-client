@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel - Lucky Draw</title>
+  <style>
+    body { font-family: Arial; display: flex; justify-content: center; align-items: center; height: 100vh; margin:0; background:#f0f0f0; }
+    .container { background:#fff; padding:30px 40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); text-align:center; width:320px; }
+    h2 { margin-bottom:20px; color:#333; }
+    input[type="number"] { width:100%; padding:10px; font-size:1.2rem; border-radius:6px; border:1px solid #ccc; margin-bottom:20px; box-sizing:border-box; }
+    button { padding:12px 25px; font-size:1rem; border:none; border-radius:6px; background:#0077ff; color:#fff; cursor:pointer; transition:background 0.2s; }
+    button:hover { background:#005fcc; }
+    .info { font-size:0.9rem; color:#555; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Set 1st Lucky Number</h2>
+    <div class="info">Enter a number between 2000 and 2500</div>
+    <input id="startNumber" type="number" min="2000" max="2500" placeholder="e.g., 2025" />
+    <button onclick="saveNumber()">Save</button>
+  </div>
+
+  <script>
+    const password = "akshay123";
+    const entered = prompt("Enter Admin Password:");
+    if (entered !== password) {
+      document.body.innerHTML = "<h2 style='color:red;text-align:center;'>Access Denied</h2>";
+    }
+
+    async function saveNumber() {
+      const input = document.getElementById("startNumber");
+      let number = parseInt(input.value, 10);
+
+      if (!isNaN(number) && number >= 2000 && number <= 2500) {
+        try {
+          const res = await fetch("/set-winner", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ number })
+          });
+          const data = await res.json();
+          if (data.success) alert(`Number ${number} saved successfully!`);
+          else alert(`First winner already set: ${data.number}`);
+          input.value = "";
+        } catch (err) {
+          alert("Error saving number: " + err);
+        }
+      } else {
+        alert("Enter a valid number between 2000 and 2500.");
+        input.focus();
+      }
+    }
+
+    // Prefill if winner exists
+    window.onload = async () => {
+      const res = await fetch("/get-winner");
+      const data = await res.json();
+      if (data.number) document.getElementById("startNumber").value = data.number;
+    };
+  </script>
+</body>
+</html>
