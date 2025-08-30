@@ -13,8 +13,13 @@ app.use(express.static(path.join(process.cwd(), "dist")));
 app.get("/get-winner", (req, res) => res.json({ number: firstWinner }));
 
 app.post("/set-winner", (req, res) => {
-  if (firstWinner !== null) return res.json({ success: false, number: firstWinner });
   firstWinner = req.body.number.toString().padStart(4, "0");
+  res.json({ success: true, number: firstWinner });
+});
+
+// Reset first winner
+app.post("/reset-winner", (req, res) => {
+  firstWinner = null;
   res.json({ success: true });
 });
 
