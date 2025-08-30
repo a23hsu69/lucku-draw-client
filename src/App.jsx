@@ -13,13 +13,13 @@ export default function App() {
   const [rangeError, setRangeError] = useState("");
   const [history, setHistory] = useState([]);
 
-  const [firstWinner, setFirstWinner] = useState(null); // null allows random spins locally
+  const [firstWinner, setFirstWinner] = useState(null);
   const [firstWinnerUsed, setFirstWinnerUsed] = useState(false);
 
   const spinSound = useRef(null);
   const celebrateSound = useRef(null);
 
-  // Update window size
+  // Track window size for Confetti
   useEffect(() => {
     setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     const handleResize = () =>
@@ -28,7 +28,7 @@ export default function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Fetch first winner from server if exists
+  // Get first winner from backend
   useEffect(() => {
     async function fetchWinner() {
       try {
@@ -38,7 +38,7 @@ export default function App() {
           setFirstWinner(data.number.padStart(4, "0"));
         }
       } catch (err) {
-        console.log("No backend or first winner yet, continuing locally.");
+        console.log("⚠️ Backend not connected, running locally.");
       }
     }
     fetchWinner();
@@ -46,40 +46,30 @@ export default function App() {
 
   const validateRange = () => {
     if (minNumber > maxNumber) {
-      setRangeError("Min cannot be greater than Max");
+      setRangeError("⚠️ Min cannot be greater than Max");
       return false;
     }
     if (minNumber < 0 || maxNumber > 9999) {
-      setRangeError("Values must be between 0 and 9999");
+      setRangeError("⚠️ Values must be between 0 and 9999");
       return false;
     }
     setRangeError("");
     return true;
   };
 
-  const setRange = () => {
-    if (validateRange()) {
-      alert(`Range set: ${minNumber} - ${maxNumber}`);
-    }
-  };
-
   const spin = async () => {
-    if (spinning) return;
-    if (!validateRange()) return;
+    if (spinning || !validateRange()) return;
 
     setSpinning(true);
     setCelebrate(false);
 
-    if (spinSound.current) {
-      spinSound.current.currentTime = 0;
-      spinSound.current.play();
-    }
+    spinSound.current?.play();
 
     try {
-      // Try backend first
-      let finalNumber = currentNumber;
+      let finalNumber;
       const res = await fetch("/get-winner");
       const data = await res.json();
+
       if (data.number && !firstWinnerUsed) {
         finalNumber = data.number.padStart(4, "0");
         setFirstWinnerUsed(true);
@@ -89,38 +79,24 @@ export default function App() {
         ).padStart(4, "0");
       }
 
-      setCurrentNumber(finalNumber);
-
-      setTimeout(() => {
-        setSpinning(false);
-        setCelebrate(true);
-        setHistory((prev) => [finalNumber, ...prev]);
-
-        if (celebrateSound.current) {
-          celebrateSound.current.currentTime = 0;
-          celebrateSound.current.play();
-        }
-
-        setTimeout(() => setCelebrate(false), 2500);
-      }, 3000);
-    } catch (err) {
-      // Local fallback if backend not available
-      const randomNum = String(
+      animateResult(finalNumber);
+    } catch {
+      const fallback = String(
         Math.floor(Math.random() * (maxNumber - minNumber + 1) + minNumber)
       ).padStart(4, "0");
-      setCurrentNumber(randomNum);
-
-      setTimeout(() => {
-        setSpinning(false);
-        setCelebrate(true);
-        setHistory((prev) => [randomNum, ...prev]);
-        if (celebrateSound.current) {
-          celebrateSound.current.currentTime = 0;
-          celebrateSound.current.play();
-        }
-        setTimeout(() => setCelebrate(false), 2500);
-      }, 3000);
+      animateResult(fallback);
     }
+  };
+
+  const animateResult = (finalNumber) => {
+    setCurrentNumber(finalNumber);
+    setTimeout(() => {
+      setSpinning(false);
+      setCelebrate(true);
+      setHistory((prev) => [finalNumber, ...prev.slice(0, 9)]); // max 10 history
+      celebrateSound.current?.play();
+      setTimeout(() => setCelebrate(false), 3000);
+    }, 3000);
   };
 
   return (
@@ -134,18 +110,18 @@ export default function App() {
             width={windowSize.width}
             height={windowSize.height}
             recycle={false}
-            numberOfPieces={500}
-            gravity={0.8}
+            numberOfPieces={400}
+            gravity={0.7}
           />
           <Poppers active={celebrate} />
         </>
       )}
 
-      <h1 className="title">Lucky Draw</h1>
+      <h1 className="title">🎰 Lucky Draw 🎉</h1>
 
       <div className="range-inputs">
         <label>
-          Min:
+          Min
           <input
             type="number"
             value={minNumber}
@@ -156,7 +132,7 @@ export default function App() {
           />
         </label>
         <label>
-          Max:
+          Max
           <input
             type="number"
             value={maxNumber}
@@ -166,11 +142,8 @@ export default function App() {
             disabled={spinning}
           />
         </label>
-        <button onClick={setRange} disabled={spinning}>
-          Set Range
-        </button>
-        {rangeError && <div className="error">{rangeError}</div>}
       </div>
+      {rangeError && <div className="error">{rangeError}</div>}
 
       <div className="slot-frame">
         {currentNumber.split("").map((digit, index) => (
@@ -184,7 +157,7 @@ export default function App() {
 
       {history.length > 0 && (
         <div className="history-panel">
-          <h3>Previous Spins:</h3>
+          <h3>History</h3>
           <ul>
             {history.map((num, i) => (
               <li key={i}>{num}</li>
@@ -196,7 +169,7 @@ export default function App() {
   );
 }
 
-// Digit animation
+// Each digit animation
 function Digit({ value, index, spinning }) {
   const numberHeight = 120;
   const rolls = 4;
@@ -211,7 +184,7 @@ function Digit({ value, index, spinning }) {
         style={{
           transform: `translateY(-${transformY}px)`,
           transition: spinning
-            ? `transform 2s cubic-bezier(.17,.67,.83,.67) ${index * 0.4}s`
+            ? `transform 2.4s cubic-bezier(.17,.67,.83,.67) ${index * 0.3}s`
             : "none",
         }}
       >
@@ -226,19 +199,19 @@ function Digit({ value, index, spinning }) {
   );
 }
 
-// Popper animation
+// Emoji poppers
 function Poppers({ active }) {
   if (!active) return null;
-  const popperCount = 25;
-  const popperEmojis = ["🎉", "🎊", "🥳"];
+  const popperEmojis = ["🎉", "🎊", "🥳", "🍾", "✨"];
 
   return (
     <>
-      {Array.from({ length: popperCount }).map((_, i) => {
+      {Array.from({ length: 25 }).map((_, i) => {
         const left = Math.random() * 100;
-        const delay = Math.random() * 1;
+        const delay = Math.random();
         const duration = 2 + Math.random() * 1.5;
-        const emoji = popperEmojis[Math.floor(Math.random() * popperEmojis.length)];
+        const emoji =
+          popperEmojis[Math.floor(Math.random() * popperEmojis.length)];
         return (
           <div
             key={i}

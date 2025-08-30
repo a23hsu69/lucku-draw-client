@@ -1,53 +1,48 @@
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
-import bodyParser from "body-parser";
+const express = require("express");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-// Setup __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "dist"))); // serve React build
 
-// Middleware
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "dist"))); // React build
-app.use(express.static(path.join(__dirname))); // for admin.html & assets
+let fixedWinner = null;      // set by admin
+let firstWinnerGiven = false; // track if first winner is already used
 
-// Global first winner
-let firstWinner = null;
-
-// Serve admin page
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "admin.html"));
-});
-
-// API to set first winner
+// Admin sets the fixed first winner
 app.post("/set-winner", (req, res) => {
-  if (!firstWinner) {
-    const { number } = req.body;
-    if (!number || isNaN(number)) {
-      return res.status(400).json({ success: false, message: "Invalid number" });
-    }
-    firstWinner = String(number).padStart(4, "0");
-    return res.json({ success: true, number: firstWinner });
-  } else {
-    return res.json({ success: false, number: firstWinner });
+  const { number } = req.body;
+
+  if (!number) {
+    return res.status(400).json({ success: false, message: "Number required" });
   }
+
+  if (fixedWinner) {
+    return res.json({ success: false, number: fixedWinner });
+  }
+
+  fixedWinner = number;
+  return res.json({ success: true, number: fixedWinner });
 });
 
-// API to get first winner
+// User fetches winner
 app.get("/get-winner", (req, res) => {
-  res.json({ number: firstWinner });
+  if (fixedWinner && !firstWinnerGiven) {
+    firstWinnerGiven = true; // first winner is consumed
+    return res.json({ success: true, number: fixedWinner });
+  }
+
+  // After first winner → random numbers
+  const randomNumber = Math.floor(Math.random() * (2500 - 2000 + 1)) + 2000;
+  return res.json({ success: true, number: randomNumber });
 });
 
-// Fallback for React SPA
+// Fallback for React Router
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
