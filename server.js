@@ -4,20 +4,21 @@ import path from "path";
 const app = express();
 app.use(express.json());
 
-// Serve React build
-app.use(express.static(path.join(process.cwd(), "dist"))); // Vite build folder
-
-// API endpoints
 let firstWinner = null;
 
+// Serve React build
+app.use(express.static(path.join(process.cwd(), "dist")));
+
+// API endpoints
 app.get("/get-winner", (req, res) => res.json({ number: firstWinner }));
+
 app.post("/set-winner", (req, res) => {
   if (firstWinner !== null) return res.json({ success: false, number: firstWinner });
   firstWinner = req.body.number.toString().padStart(4, "0");
   res.json({ success: true });
 });
 
-// Serve admin panel
+// Serve Admin panel
 app.get("/admin", (req, res) => res.sendFile(path.join(process.cwd(), "admin.html")));
 
 // Serve React app for all other routes
