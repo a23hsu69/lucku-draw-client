@@ -1,48 +1,37 @@
-const express = require("express");
-const path = require("path");
+import express from "express";
+import path from "path";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "dist"))); // serve React build
 
-let fixedWinner = null;      // set by admin
-let firstWinnerGiven = false; // track if first winner is already used
+let firstWinner = null;
 
-// Admin sets the fixed first winner
-app.post("/set-winner", (req, res) => {
-  const { number } = req.body;
+// Serve React build
+app.use(express.static(path.join(process.cwd(), "build")));
 
-  if (!number) {
-    return res.status(400).json({ success: false, message: "Number required" });
-  }
-
-  if (fixedWinner) {
-    return res.json({ success: false, number: fixedWinner });
-  }
-
-  fixedWinner = number;
-  return res.json({ success: true, number: fixedWinner });
-});
-
-// User fetches winner
+// Get first winner
 app.get("/get-winner", (req, res) => {
-  if (fixedWinner && !firstWinnerGiven) {
-    firstWinnerGiven = true; // first winner is consumed
-    return res.json({ success: true, number: fixedWinner });
+  res.json({ number: firstWinner });
+});
+
+// Set first winner
+app.post("/set-winner", (req, res) => {
+  if (firstWinner !== null) {
+    return res.json({ success: false, number: firstWinner });
   }
-
-  // After first winner → random numbers
-  const randomNumber = Math.floor(Math.random() * (2500 - 2000 + 1)) + 2000;
-  return res.json({ success: true, number: randomNumber });
+  const { number } = req.body;
+  firstWinner = number.toString().padStart(4, "0");
+  res.json({ success: true });
 });
 
-// Fallback for React Router
+// Serve admin page
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "admin.html"));
+});
+
+// Serve React for all other routes
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  res.sendFile(path.join(process.cwd(), "build", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+app.listen(5000, () => console.log("Server running on port 5000"));
