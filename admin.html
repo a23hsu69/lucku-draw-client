@@ -5,48 +5,11 @@
   <title>Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
-    }
-    .container {
-      background: rgba(255,255,255,0.08);
-      padding: 30px;
-      border-radius: 16px;
-      text-align: center;
-      color: #fff;
-      width: 320px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-    }
+    body { font-family: "Poppins", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg,#0f0f0f,#1c1c1c);}
+    .container { background: rgba(255,255,255,0.08); padding: 30px; border-radius: 16px; text-align: center; color: #fff; width: 320px; box-shadow: 0 6px 20px rgba(0,0,0,0.6);}
     h2 { margin-bottom: 20px; color: #ffcc00; }
-    input {
-      width: 100%;
-      padding: 10px;
-      font-size: 1.2rem;
-      border: 2px solid #555;
-      border-radius: 10px;
-      background: #222;
-      color: #fff;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      font-size: 1rem;
-      background: #ff4d4d;
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background 0.3s;
-    }
+    input { width: 100%; padding: 10px; font-size: 1.2rem; border: 2px solid #555; border-radius: 10px; background: #222; color: #fff; margin-bottom: 20px; text-align: center;}
+    button { width: 100%; padding: 12px; font-size: 1rem; background: #ff4d4d; border: none; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 600; transition: background 0.3s; margin-bottom: 10px; }
     button:hover { background: #e63c3c; }
     .denied { color: red; text-align: center; }
   </style>
@@ -55,14 +18,17 @@
   <div class="container" id="admin">
     <h2>Set First Winner</h2>
     <input id="winnerNumber" type="number" placeholder="2000 - 2500" />
-    <button onclick="saveNumber()">Save Winner</button>
+    <button onclick="saveNumber()">Save / Overwrite Winner</button>
+    <button onclick="resetWinner()">Reset Winner</button>
   </div>
 
   <script>
-    const PASSWORD = "admin123"; // change this
+    // Simple password protection
+    const PASSWORD = "admin123"; // can replace with VITE_ADMIN_PASS if needed
     const entered = prompt("Enter Admin Password:");
     if (entered !== PASSWORD) {
       document.body.innerHTML = "<h2 class='denied'>❌ Access Denied</h2>";
+      throw new Error("Access Denied");
     }
 
     async function saveNumber() {
@@ -78,11 +44,18 @@
           body: JSON.stringify({ number: num })
         });
         const data = await res.json();
-        if (data.success) {
-          alert(`Winner set to ${num}`);
-        } else {
-          alert(`First winner already set: ${data.number}`);
-        }
+        alert(`First winner set/overwritten: ${data.number}`);
+      } catch (err) {
+        alert("Error: " + err);
+      }
+    }
+
+    async function resetWinner() {
+      if (!confirm("Are you sure you want to reset the first winner?")) return;
+      try {
+        const res = await fetch("/reset-winner", { method: "POST" });
+        const data = await res.json();
+        if (data.success) alert("First winner has been reset. You can now set a new winner.");
       } catch (err) {
         alert("Error: " + err);
       }
